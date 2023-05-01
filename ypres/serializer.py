@@ -23,12 +23,17 @@ def _compile_field_to_tuple(field: Field, name: str, serializer_cls: Any) -> tup
     # Set the field name to a supplied label; defaults to the attribute name.
     name = field.label or name
 
-    return (name, getter, to_value, field.call, field.required,
-            field.getter_takes_serializer)
+    return (
+        name,
+        getter,
+        to_value,
+        field.call,
+        field.required,
+        field.getter_takes_serializer,
+    )
 
 
 class SerializerMeta(type):
-
     @staticmethod
     def _get_fields(direct_fields: Mapping, serializer_cls: Any) -> dict:
         field_map: dict = {}
@@ -89,20 +94,23 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
     :param instance: The object or objects to serialize.
     :param bool many: If ``instance`` is a collection of objects, set ``many``
         to ``True`` to serialize to a list.
-    :param data: Provided for compatibility with DRF serializers. Should not be used.
-    :param dict context: A context dictionary for additional parameters to be passed into
-        the serializer instance.
+    :param data: Provided for compatibility with DRF serializers. Should not
+        be used.
+    :param dict context: A context dictionary for additional parameters to be
+        passed into the serializer instance.
     """
+
     #: The default getter used if :meth:`Field.as_getter` returns None.
     default_getter: Any = operator.attrgetter
 
-    def __init__(self,  # type: ignore
-                 instance: Optional[Any] = None,
-                 many: bool = False,
-                 context: Optional[dict] = None,
-                 **kwargs):
-
-        super(Serializer, self).__init__(**kwargs)
+    def __init__(
+        self,  # type: ignore
+        instance: Optional[Any] = None,
+        many: bool = False,
+        context: Optional[dict] = None,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
         self.instance: Any = instance
         self.many: bool = many
         self.context = context
@@ -169,6 +177,7 @@ class DictSerializer(Serializer):
         FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
+
     default_getter: Any = operator.itemgetter
 
 
@@ -194,16 +203,18 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         out_data = await FooSerializer(in_data).data
 
     """
+
     #: The default getter used if :meth:`Field.as_getter` returns None.
     default_getter: Any = operator.attrgetter
 
-    def __init__(self,  # type: ignore
-                 instance: Optional[Any] = None,
-                 many: bool = False,
-                 context: Optional[dict] = None,
-                 **kwargs):
-
-        super(AsyncSerializer, self).__init__(**kwargs)
+    def __init__(
+        self,  # type: ignore
+        instance: Optional[Any] = None,
+        many: bool = False,
+        context: Optional[dict] = None,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
         self.instance: Optional[Any] = instance
         self.many: bool = many
         self.context: Optional[dict] = context
@@ -274,4 +285,5 @@ class AsyncDictSerializer(AsyncSerializer):
         FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
+
     default_getter: Any = operator.itemgetter

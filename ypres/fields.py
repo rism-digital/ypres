@@ -20,16 +20,19 @@ class Field:
     :param bool required: Whether the field is required. If set to ``False``,
         :meth:`Field.to_value` will not be called if the value is ``None``.
     """
+
     #: Set to ``True`` if the value function returned from
     #: :meth:`Field.as_getter` requires the serializer to be passed in as the
     #: first argument. Otherwise, the object will be the only parameter.
     getter_takes_serializer: bool = False
 
-    def __init__(self,
-                 attr: Optional[str] = None,
-                 call: bool = False,
-                 label: Optional[str] = None,
-                 required: bool = True):
+    def __init__(
+        self,
+        attr: Optional[str] = None,
+        call: bool = False,
+        label: Optional[str] = None,
+        required: bool = True,
+    ):
         self.attr: Optional[str] = attr
         self.call: bool = call
         self.label: Optional[str] = label
@@ -47,6 +50,7 @@ class Field:
         :param value: The value fetched from the object being serialized.
         """
         return value
+
     to_value._ypres_base_implementation = True  # type: ignore
 
     def is_to_value_overridden(self):
@@ -54,7 +58,7 @@ class Field:
         # If to_value isn't a method, it must have been overridden.
         if not isinstance(to_value, types.MethodType):
             return True
-        return not getattr(to_value, '_ypres_base_implementation', False)
+        return not getattr(to_value, "_ypres_base_implementation", False)
 
     def as_getter(self, serializer_field_name: str, serializer_cls: Any):
         """Returns a function that fetches an attribute from an object.
@@ -82,11 +86,15 @@ class Field:
 
 class StaticField(Field):
     """A :class:`Field` that simply repeats a static value."""
-    def __init__(self, value: Any,
-                 attr: Optional[str] = None,
-                 call: bool = False,
-                 label: Optional[str] = None,
-                 required: bool = True) -> None:
+
+    def __init__(
+        self,
+        value: Any,
+        attr: Optional[str] = None,
+        call: bool = False,
+        label: Optional[str] = None,
+        required: bool = True,
+    ) -> None:
         super().__init__(attr, call, label, required)
         self.value: Any = value
 
@@ -99,21 +107,25 @@ class StaticField(Field):
 
 class StrField(Field):
     """A :class:`Field` that converts the value to a string."""
+
     to_value: Any = staticmethod(str)
 
 
 class IntField(Field):
     """A :class:`Field` that converts the value to an integer."""
+
     to_value: Any = staticmethod(int)
 
 
 class FloatField(Field):
     """A :class:`Field` that converts the value to a float."""
+
     to_value: Any = staticmethod(float)
 
 
 class BoolField(Field):
     """A :class:`Field` that converts the value to a boolean."""
+
     to_value: Any = staticmethod(bool)
 
 
@@ -140,6 +152,7 @@ class MethodField(Field):
     :param str method: The method on the serializer to call. Defaults to
         ``'get_<field name>'``.
     """
+
     getter_takes_serializer = True
 
     def __init__(self, method: Optional[str] = None, **kwargs):  # type: ignore
