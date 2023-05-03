@@ -30,6 +30,7 @@ def _compile_field_to_tuple(field: Field, name: str, serializer_cls: Any) -> tup
         field.call,
         field.required,
         field.getter_takes_serializer,
+        field.emit_none,
     )
 
 
@@ -88,7 +89,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
             bar = Field()
 
         foo = Foo(foo='hello', bar=5)
-        FooSerializer(foo).data
+        res = FooSerializer(foo).data
         # {'foo': 'hello', 'bar': 5}
 
     :param instance: The object or objects to serialize.
@@ -108,17 +109,19 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         instance: Optional[Any] = None,
         many: bool = False,
         context: Optional[dict] = None,
+        emit_none: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.instance: Any = instance
         self.many: bool = many
         self.context = context
+        self._emit_none = emit_none
         self._data: Optional[Union[list, dict]] = None
 
     def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
-        for name, getter, to_value, call, required, pass_self in fields:
+        for name, getter, to_value, call, required, pass_self, emit_none in fields:
             if pass_self:
                 result = getter(self, instance)
             else:
@@ -136,8 +139,13 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
                     if to_value:
                         result = to_value(result)
 
-            if result is not None:
-                v[name] = result
+            # If `None` values should not appear in the output,
+            # and we have a result that is None, we just skip
+            # it and continue to the next field.
+            if result is None and emit_none is False:
+                continue
+
+            v[name] = result
 
         return v
 
@@ -174,7 +182,7 @@ class DictSerializer(Serializer):
             bar = FloatField()
 
         foo = {'foo': '5', 'bar': '2.2'}
-        FooSerializer(foo).data
+        res = FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
 
@@ -212,17 +220,19 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         instance: Optional[Any] = None,
         many: bool = False,
         context: Optional[dict] = None,
+        emit_none: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.instance: Optional[Any] = instance
         self.many: bool = many
         self.context: Optional[dict] = context
+        self._emit_none = emit_none
         self._data: Optional[Union[list, dict]] = None
 
     async def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
-        for name, getter, to_value, call, required, pass_self in fields:
+        for name, getter, to_value, call, required, pass_self, emit_none in fields:
             if pass_self:
                 # checks to see if the incoming method is a coroutine
                 if inspect.iscoroutinefunction(getter):
@@ -247,8 +257,10 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
                         else:
                             result = to_value(result)
 
-            if result is not None:
-                v[name] = result
+            if result is None and emit_none is False:
+                continue
+
+            v[name] = result
 
         return v
 
@@ -282,7 +294,7 @@ class AsyncDictSerializer(AsyncSerializer):
             bar = FloatField()
 
         foo = {'foo': '5', 'bar': '2.2'}
-        FooSerializer(foo).data
+        res = await FooSerializer(foo).data
         # {'foo': 5, 'bar': 2.2}
     """
 

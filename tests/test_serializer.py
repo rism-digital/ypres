@@ -1,5 +1,5 @@
 from .obj import Obj
-from ypres.fields import Field, MethodField, IntField, FloatField, StrField
+from ypres.fields import Field, MethodField, IntField, FloatField, StrField, BoolField
 from ypres.serializer import Serializer, DictSerializer
 import unittest
 
@@ -157,7 +157,8 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
+        self.assertNotIn("a", data)
 
         o = Obj(a="5")
         data = ASerializer(o).data
@@ -175,7 +176,7 @@ class TestSerializer(unittest.TestCase):
             a = Field(required=False)
 
         data = ASerializer({"a": None}).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
 
         data = ASerializer({}).data
         self.assertNotIn("a", data)
@@ -184,7 +185,7 @@ class TestSerializer(unittest.TestCase):
             a = Field()
 
         data = ASerializer({"a": None}).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
 
         with self.assertRaises(KeyError):
             ASerializer({}).data
@@ -195,7 +196,7 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
 
         o = Obj()
         data = ASerializer(o).data
@@ -206,7 +207,7 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
 
         o = Obj()
         with self.assertRaises(AttributeError):
@@ -221,7 +222,8 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
+        self.assertNotIn("a", data)
 
         o = Obj(a="5")
         data = ASerializer(o).data
@@ -235,10 +237,10 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         data = ASerializer(o).data
-        self.assertIsNone(data["a"])
+        self.assertIsNone(data.get("a"))
 
     def test_error_on_data(self):
-        with self.assertRaises(RuntimeError):
+        with self.assertRaises(TypeError):
             Serializer(data="foo")
 
     def test_serializer_with_custom_output_label(self):
@@ -256,6 +258,56 @@ class TestSerializer(unittest.TestCase):
         self.assertEqual(data["@context"], "http://foo/bar/baz/")
         self.assertIn("@content", data)
         self.assertEqual(data["@content"], "http://baz/bar/foo/")
+
+    def test_emit_none_true_required_true_serializer(self):
+        class FooSerializer(Serializer):
+            foo = StrField(emit_none=True)
+
+        o = Obj(foo="blah")
+        data = FooSerializer(o).data
+        self.assertIn("foo", data)
+
+        # This should raise because it doesn't have a "foo" field
+        o2 = Obj(bar="blah")
+        with self.assertRaises(AttributeError):
+            _ = FooSerializer(o2).data
+
+    def test_emit_none_false_required_true_serializer(self):
+        class FooSerializer(Serializer):
+            foo = StrField(required=False)
+
+        # This should not raise an error because 'foo' is not required. "bar" will
+        # be ignored since we don't have a serializer field for it.
+        o = Obj(bar="blah")
+        data = FooSerializer(o).data
+        self.assertNotIn("bar", data)
+
+    def test_emit_none_true_required_false_serializer(self):
+        class FooSerializer(Serializer):
+            foo = StrField(emit_none=True, required=False)
+            bar = StrField(emit_none=True, required=False)
+            baz = BoolField(emit_none=True, required=False)
+            gab = IntField(emit_none=True, required=False)
+
+        o = Obj(foo="blah", bar=None, baz=None, gab=None)
+        data = FooSerializer(o).data
+        self.assertIn("foo", data)
+        self.assertIsNotNone(data["foo"])
+        self.assertIn("bar", data)
+        self.assertIsNone(data["bar"])
+        self.assertIn("baz", data)
+        self.assertIsNone(data["baz"])
+        self.assertIn("gab", data)
+        self.assertIsNone(data["gab"])
+
+    def test_serializing_int_and_none(self):
+        class FooSerializer(Serializer):
+            foo = IntField(emit_none=True)
+
+        o = Obj(foo=None)
+        # ensure this works as expected
+        with self.assertRaises(TypeError):
+            _ = FooSerializer(o).data
 
 
 if __name__ == "__main__":

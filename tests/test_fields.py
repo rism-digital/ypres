@@ -29,6 +29,10 @@ class TestFields(unittest.TestCase):
         self.assertEqual(field.to_value("a"), "a")
         self.assertEqual(field.to_value(5), "5")
 
+    def test_str_field_none(self):
+        field = StrField()
+        self.assertIsNone(field.to_value(None))
+
     def test_bool_field(self):
         field = BoolField()
         self.assertTrue(field.to_value(True))
@@ -36,11 +40,21 @@ class TestFields(unittest.TestCase):
         self.assertTrue(field.to_value(1))
         self.assertFalse(field.to_value(0))
 
+    def test_bool_field_none(self):
+        field = BoolField()
+        self.assertIsNone(field.to_value(None))
+
     def test_int_field(self):
         field = IntField()
         self.assertEqual(field.to_value(5), 5)
         self.assertEqual(field.to_value(5.4), 5)
         self.assertEqual(field.to_value("5"), 5)
+
+    def test_int_field_none(self):
+        field = IntField()
+        # Ensure this raises an error if trying to serialize `None` as an `int`
+        with self.assertRaises(TypeError):
+            field.to_value(None)
 
     def test_float_field(self):
         field = FloatField()

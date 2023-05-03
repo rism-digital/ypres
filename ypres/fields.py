@@ -19,6 +19,10 @@ class Field:
         instead of using the attribute name of the field.
     :param bool required: Whether the field is required. If set to ``False``,
         :meth:`Field.to_value` will not be called if the value is ``None``.
+    :param: bool emit_none: Whether the field will emit an explicit ``None``
+        value if the value being serialized is ``None``. By default, fields
+        that evaluate to ``None`` will be removed from the output. Set this
+        to ``True`` to keep the value in the output.
     """
 
     #: Set to ``True`` if the value function returned from
@@ -32,11 +36,13 @@ class Field:
         call: bool = False,
         label: Optional[str] = None,
         required: bool = True,
+        emit_none: bool = False,
     ):
         self.attr: Optional[str] = attr
         self.call: bool = call
         self.label: Optional[str] = label
         self.required: bool = required
+        self.emit_none = emit_none
 
     def to_value(self, value: Any):
         """Transform the serialized value.
@@ -106,9 +112,14 @@ class StaticField(Field):
 
 
 class StrField(Field):
-    """A :class:`Field` that converts the value to a string."""
+    """A :class:`Field` that converts the value to a string.
 
-    to_value: Any = staticmethod(str)
+    Since Python will happily cast `None` to the string `"None"`,
+    this method ensures that values of `None` are handled and
+    passed through, instead of cast.
+    """
+
+    to_value: Any = staticmethod(lambda s: str(s) if s else None)
 
 
 class IntField(Field):
@@ -124,9 +135,14 @@ class FloatField(Field):
 
 
 class BoolField(Field):
-    """A :class:`Field` that converts the value to a boolean."""
+    """A :class:`Field` that converts the value to a boolean.
 
-    to_value: Any = staticmethod(bool)
+    Python will cast a value of `None` to the boolean value of False,
+    so this method ensures values of `None` are passed through instead
+    of cast to a boolean value.
+    """
+
+    to_value: Any = staticmethod(lambda b: bool(b) if b is not None else None)
 
 
 class MethodField(Field):
