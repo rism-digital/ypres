@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "ypres"
-version = "0.3.3"
-description = ""
+version = "1.0.0"
+description = "ypres is a simple object serialization framework built for speed."
 authors = ["Andrew Hankinson <andrew.hankinson@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.9"
 
 [tool.poetry.group.dev.dependencies]
 pep8 = "^1.5.7"
