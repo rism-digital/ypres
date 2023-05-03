@@ -3,7 +3,7 @@ name = "ypres"
 version = "0.3.3"
 description = ""
 authors = ["Andrew Hankinson <andrew.hankinson@gmail.com>"]
-readme = "README.rst"
+readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.7"
