@@ -6,7 +6,7 @@ authors = ["Andrew Hankinson <andrew.hankinson@gmail.com>"]
 readme = "README.rst"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.7"
 
 [tool.poetry.group.dev.dependencies]
 pep8 = "^1.5.7"
