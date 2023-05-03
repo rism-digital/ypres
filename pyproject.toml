@@ -15,6 +15,7 @@ flake8 = "^6.0.0"
 pyflakes = "^3.0.1"
 wheel = "^0.40.0"
 mypy = "^1.2.0"
+ipython = "^8.13.1"
 
 [build-system]
 requires = ["poetry-core"]
