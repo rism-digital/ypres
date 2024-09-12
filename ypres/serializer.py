@@ -1,6 +1,6 @@
 import inspect
 import operator
-from typing import Callable, Optional, Union, Any, Mapping
+from typing import Any, Callable, Mapping, Optional, Union
 
 from ypres.fields import Field
 
@@ -60,10 +60,10 @@ class SerializerMeta(type):
         for attr_name, field in attrs.items():
             if isinstance(field, Field):
                 direct_fields[attr_name] = field
-        for k in direct_fields.keys():
+        for k in direct_fields:
             del attrs[k]
 
-        real_cls = super(SerializerMeta, mcs).__new__(mcs, name, bases, attrs)
+        real_cls = super().__new__(mcs, name, bases, attrs)
 
         field_map = mcs._get_fields(direct_fields, real_cls)
         compiled_fields = mcs._compile_fields(field_map, real_cls)
@@ -110,7 +110,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         many: bool = False,
         context: Optional[dict] = None,
         emit_none: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.instance: Any = instance
@@ -221,7 +221,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         many: bool = False,
         context: Optional[dict] = None,
         emit_none: bool = False,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         self.instance: Optional[Any] = instance

@@ -1,5 +1,5 @@
 import types
-from typing import Optional, Any
+from typing import Any, Optional
 
 
 class Field:

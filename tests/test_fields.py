@@ -1,6 +1,8 @@
-from .obj import Obj
-from ypres.fields import Field, MethodField, BoolField, IntField, FloatField, StrField
 import unittest
+
+from ypres.fields import BoolField, Field, FloatField, IntField, MethodField, StrField
+
+from .obj import Obj
 
 
 class TestFields(unittest.TestCase):
@@ -10,7 +12,7 @@ class TestFields(unittest.TestCase):
         self.assertEqual(Field().to_value(None), None)
 
     def test_as_getter_none(self):
-        self.assertEqual(Field().as_getter(None, None), None)
+        self.assertEqual(Field().as_getter(None, None), None)  # noqa
 
     def test_is_to_value_overridden(self):
         class TransField(Field):
@@ -62,7 +64,7 @@ class TestFields(unittest.TestCase):
         self.assertEqual(field.to_value("5.5"), 5.5)
 
     def test_method_field(self):
-        class FakeSerializer(object):
+        class FakeSerializer:
             def get_a(self, obj):
                 return obj.a
 

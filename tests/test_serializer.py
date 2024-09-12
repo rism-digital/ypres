@@ -1,7 +1,9 @@
-from .obj import Obj
-from ypres.fields import Field, MethodField, IntField, FloatField, StrField, BoolField
-from ypres.serializer import Serializer, DictSerializer
 import unittest
+
+from ypres.fields import BoolField, Field, FloatField, IntField, MethodField, StrField
+from ypres.serializer import DictSerializer, Serializer
+
+from .obj import Obj
 
 
 class TestSerializer(unittest.TestCase):
@@ -169,7 +171,7 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         with self.assertRaises(TypeError):
-            ASerializer(o).data
+            ASerializer(o).data  # noqa
 
     def test_optional_field_dictserializer(self):
         class ASerializer(DictSerializer):
@@ -188,7 +190,7 @@ class TestSerializer(unittest.TestCase):
         self.assertIsNone(data.get("a"))
 
         with self.assertRaises(KeyError):
-            ASerializer({}).data
+            ASerializer({}).data  # noqa
 
     def test_optional_field(self):
         class ASerializer(Serializer):
@@ -211,7 +213,7 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj()
         with self.assertRaises(AttributeError):
-            ASerializer(o).data
+            ASerializer(o).data  # noqa
 
     def test_optional_methodfield(self):
         class ASerializer(Serializer):

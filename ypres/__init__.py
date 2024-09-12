@@ -1,17 +1,17 @@
 from ypres.fields import (
-    Field,
     BoolField,
-    IntField,
+    Field,
     FloatField,
+    IntField,
     MethodField,
-    StrField,
     StaticField,
+    StrField,
 )
 from ypres.serializer import (
-    Serializer,
-    DictSerializer,
-    AsyncSerializer,
     AsyncDictSerializer,
+    AsyncSerializer,
+    DictSerializer,
+    Serializer,
 )
 
 __version__ = "1.0.0"
