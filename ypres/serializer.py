@@ -1,6 +1,7 @@
 import inspect
 import operator
-from typing import Any, Callable, Mapping, Optional, Union
+from collections.abc import Mapping
+from typing import Any, Callable, Optional, Union
 
 from ypres.fields import Field
 
