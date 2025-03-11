@@ -4,7 +4,7 @@ description = "ypres is a simple object serialization framework built for speed.
 version = "1.0.0"
 readme = "README.md"
 authors = [{name = "Andrew Hankinson", email = "andrew.hankinson@gmail.com"}]
-requires-python = '>=3.11,<4.0'
+requires-python = '>=3.10,<4.0'
 dependencies = []
 
 [tool.poetry]
