@@ -1,12 +1,14 @@
-[tool.poetry]
+[project]
 name = "ypres"
-version = "1.0.0"
 description = "ypres is a simple object serialization framework built for speed."
-authors = ["Andrew Hankinson <andrew.hankinson@gmail.com>"]
+version = "1.0.0"
 readme = "README.md"
+authors = [{name = "Andrew Hankinson", email = "andrew.hankinson@gmail.com"}]
+requires-python = '>=3.11,<4.0'
+dependencies = []
 
-[tool.poetry.dependencies]
-python = "^3.9"
+[tool.poetry]
+requires-poetry = '>=2.0,<3.0'
 
 [tool.poetry.group.dev.dependencies]
 pep8 = "^1.5.7"
@@ -19,7 +21,7 @@ ipython = "^8.13.1"
 black = "^23.3.0"
 
 [build-system]
-requires = ["poetry-core"]
+requires = ['poetry-core (>=2.0,<3.0)']
 build-backend = "poetry.core.masonry.api"
 
 
@@ -54,3 +56,4 @@ ignore = [
     # Ignore McCabe complexity (for now).
     "C901",
 ]
+

@@ -1,7 +1,7 @@
 import inspect
 import operator
-from collections.abc import Mapping
-from typing import Any, Callable, Optional, Union
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from ypres.fields import Field
 
@@ -17,7 +17,7 @@ def _compile_field_to_tuple(field: Field, name: str, serializer_cls: Any) -> tup
         getter = serializer_cls.default_getter(field.attr or name)
 
     # Only set a to_value function if it has been overridden for performance.
-    to_value: Optional[Callable] = None
+    to_value: Callable | None = None
     if field.is_to_value_overridden():
         to_value = field.to_value
 
@@ -107,9 +107,9 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
     def __init__(
         self,  # type: ignore
-        instance: Optional[Any] = None,
+        instance: Any | None = None,
         many: bool = False,
-        context: Optional[dict] = None,
+        context: dict | None = None,
         emit_none: bool = False,
         **kwargs,
     ):
@@ -118,7 +118,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         self.many: bool = many
         self.context = context
         self._emit_none = emit_none
-        self._data: Optional[Union[list, dict]] = None
+        self._data: list | dict | None = None
 
     def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
@@ -150,7 +150,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    def to_value(self, instance) -> Union[list, dict]:
+    def to_value(self, instance) -> list | dict:
         fields: tuple = self._compiled_fields
         if self.many:
             serialize = self._serialize
@@ -158,7 +158,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         return self._serialize(instance, fields)
 
     @property
-    def data(self) -> Union[list, dict]:
+    def data(self) -> list | dict:
         """Get the serialized data from the :class:`Serializer`.
 
         The data will be cached for future accesses.
@@ -218,18 +218,18 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
 
     def __init__(
         self,  # type: ignore
-        instance: Optional[Any] = None,
+        instance: Any | None = None,
         many: bool = False,
-        context: Optional[dict] = None,
+        context: dict | None = None,
         emit_none: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.instance: Optional[Any] = instance
+        self.instance: Any | None = instance
         self.many: bool = many
-        self.context: Optional[dict] = context
+        self.context: dict | None = context
         self._emit_none = emit_none
-        self._data: Optional[Union[list, dict]] = None
+        self._data: list | dict | None = None
 
     async def _serialize(self, instance: Any, fields: tuple) -> dict:
         v: dict = {}
@@ -265,7 +265,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    async def to_value(self, instance: Any) -> Union[list, dict]:
+    async def to_value(self, instance: Any) -> list | dict:
         fields: tuple = self._compiled_fields
         if self.many:
             serialize = self._serialize
@@ -273,7 +273,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         return await self._serialize(instance, fields)
 
     @property
-    async def data(self) -> Union[list, dict]:
+    async def data(self) -> list | dict:
         """Get the serialized data from the :class:`Serializer`.
 
         The data will be cached for future accesses.

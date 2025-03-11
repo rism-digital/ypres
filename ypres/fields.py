@@ -1,5 +1,6 @@
 import types
-from typing import Any, Optional
+from datetime import date, datetime, time
+from typing import Any
 
 
 class Field:
@@ -32,15 +33,15 @@ class Field:
 
     def __init__(
         self,
-        attr: Optional[str] = None,
+        attr: str | None = None,
         call: bool = False,
-        label: Optional[str] = None,
+        label: str | None = None,
         required: bool = True,
         emit_none: bool = False,
     ):
-        self.attr: Optional[str] = attr
+        self.attr: str | None = attr
         self.call: bool = call
-        self.label: Optional[str] = label
+        self.label: str | None = label
         self.required: bool = required
         self.emit_none = emit_none
 
@@ -96,9 +97,9 @@ class StaticField(Field):
     def __init__(
         self,
         value: Any,
-        attr: Optional[str] = None,
+        attr: str | None = None,
         call: bool = False,
-        label: Optional[str] = None,
+        label: str | None = None,
         required: bool = True,
     ) -> None:
         super().__init__(attr, call, label, required)
@@ -171,12 +172,34 @@ class MethodField(Field):
 
     getter_takes_serializer = True
 
-    def __init__(self, method: Optional[str] = None, **kwargs):  # type: ignore
+    def __init__(self, method: str | None = None, **kwargs):  # type: ignore
         super().__init__(**kwargs)
-        self.method: Optional[str] = method
+        self.method: str | None = method
 
     def as_getter(self, serializer_field_name: str, serializer_cls: Any):
-        method_name: Optional[str] = self.method
+        method_name: str | None = self.method
         if method_name is None:
             method_name = f"get_{serializer_field_name}"
         return getattr(serializer_cls, method_name)
+
+
+# From https://github.com/PKharlamov/drf-serpy/blob/master/drf_serpy/fields.py
+class DateField(Field):
+    """A `Field` that converts the value to a date format."""
+
+    date_format = "%Y-%m-%d"
+
+    def __init__(self, date_format: str = None, **kwargs):
+        super().__init__(**kwargs)
+        self.date_format = date_format or self.date_format
+
+    def to_value(self, value: datetime | time | date) -> str | None:
+        if value:
+            return value.strftime(self.date_format)
+        return None
+
+
+class DateTimeField(DateField):
+    """A `Field` that converts the value to a date time format."""
+
+    date_format = "%Y-%m-%dT%H:%M:%S.%fZ"
