@@ -189,7 +189,7 @@ class DateField(Field):
 
     date_format = "%Y-%m-%d"
 
-    def __init__(self, date_format: str = None, **kwargs):
+    def __init__(self, date_format: str | None = None, **kwargs):
         super().__init__(**kwargs)
         self.date_format = date_format or self.date_format
 

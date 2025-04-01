@@ -116,7 +116,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         super().__init__(**kwargs)
         self.instance: Any = instance
         self.many: bool = many
-        self.context = context
+        self.context: dict = context or {}
         self._emit_none = emit_none
         self._data: list | dict | None = None
 
