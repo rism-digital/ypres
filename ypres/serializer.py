@@ -1,43 +1,67 @@
 import inspect
 import operator
+from abc import abstractmethod
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import Any, NamedTuple
 
 from ypres.fields import Field
 
 
+class FieldDefinitions(NamedTuple):
+    name: str
+    getter: Callable
+    to_value: Any
+    call: bool
+    required: bool
+    pass_self: bool
+    emit_none: bool
+    getter_is_coro: bool
+    toval_is_coro: bool
+
+
 class SerializerBase(Field):
+    @staticmethod
+    @abstractmethod
+    def default_getter(k: str) -> Any: ...
+
     _field_map: dict = {}
-    _compiled_fields: tuple = ()
+    _compiled_fields: list[FieldDefinitions] = []
 
 
-def _compile_field_to_tuple(field: Field, name: str, serializer_cls: Any) -> tuple:
+def _compile_field_to_tuple(
+    field: Field, name: str, serializer_cls: type[SerializerBase]
+) -> FieldDefinitions:
     getter = field.as_getter(name, serializer_cls)
     if getter is None:
         getter = serializer_cls.default_getter(field.attr or name)
+
+    getter_is_coro: bool = inspect.iscoroutinefunction(getter)
 
     # Only set a to_value function if it has been overridden for performance.
     to_value: Callable | None = None
     if field.is_to_value_overridden():
         to_value = field.to_value
 
+    toval_is_coro: bool = inspect.iscoroutinefunction(to_value)
     # Set the field name to a supplied label; defaults to the attribute name.
     name = field.label or name
 
-    return (
-        name,
-        getter,
-        to_value,
-        field.call,
-        field.required,
-        field.getter_takes_serializer,
-        field.emit_none,
+    return FieldDefinitions(
+        name=name,
+        getter=getter,
+        to_value=to_value,
+        call=field.call,
+        required=field.required,
+        pass_self=field.getter_takes_serializer,
+        emit_none=field.emit_none,
+        getter_is_coro=getter_is_coro,
+        toval_is_coro=toval_is_coro,
     )
 
 
 class SerializerMeta(type):
     @staticmethod
-    def _get_fields(direct_fields: Mapping, serializer_cls: Any) -> dict:
+    def _get_fields(direct_fields: Mapping, serializer_cls) -> dict:
         field_map: dict = {}
         # Get all the fields from base classes.
         for cls in serializer_cls.__mro__[::-1]:
@@ -47,7 +71,7 @@ class SerializerMeta(type):
         return field_map
 
     @staticmethod
-    def _compile_fields(field_map: dict, serializer_cls: Any) -> list[tuple]:
+    def _compile_fields(field_map: dict, serializer_cls) -> list[FieldDefinitions]:
         return [
             _compile_field_to_tuple(field, name, serializer_cls)
             for name, field in field_map.items()
@@ -70,7 +94,7 @@ class SerializerMeta(type):
         compiled_fields = mcs._compile_fields(field_map, real_cls)
 
         real_cls._field_map = field_map  # type: ignore
-        real_cls._compiled_fields = tuple(compiled_fields)  # type: ignore
+        real_cls._compiled_fields = compiled_fields  # type: ignore
 
         return real_cls
 
@@ -116,34 +140,48 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         super().__init__(**kwargs)
         self.instance: Any = instance
         self.many: bool = many
-        self.context: dict = context or {}
+        self.context: dict = context if context else {}
         self._emit_none = emit_none
         self._data: list | dict | None = None
 
-    def _serialize(self, instance: Any, fields: tuple) -> dict:
+    def _serialize(self, instance: Any, fields: list[FieldDefinitions]) -> dict:
         v: dict = {}
-        for name, getter, to_value, call, required, pass_self, emit_none in fields:
-            if pass_self:
-                result = getter(self, instance)
-            else:
-                try:
-                    result = getter(instance)
-                except (KeyError, AttributeError):
-                    if required:
-                        raise
-                    else:
-                        continue
 
-                if required or result is not None:
-                    if call:
-                        result = result()
-                    if to_value:
-                        result = to_value(result)
+        for (
+            name,
+            getter,
+            to_value,
+            call,
+            required,
+            pass_self,
+            emit_none,
+            _,
+            _,
+        ) in fields:
+            try:
+                result = getter(self, instance) if pass_self else getter(instance)
+            except (KeyError, AttributeError):
+                if required:
+                    raise
+                continue
+
+            # Skip if result is None and not required
+            if result is None and not required:
+                if emit_none:
+                    v[name] = result
+                    continue
+                continue
+
+            if call:
+                result = result()
+
+            if to_value:
+                result = to_value(result)
 
             # If `None` values should not appear in the output,
             # and we have a result that is None, we just skip
             # it and continue to the next field.
-            if result is None and emit_none is False:
+            if result is None and not emit_none:
                 continue
 
             v[name] = result
@@ -151,7 +189,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         return v
 
     def to_value(self, instance) -> list | dict:
-        fields: tuple = self._compiled_fields
+        fields: list[FieldDefinitions] = self._compiled_fields
         if self.many:
             serialize = self._serialize
             return [serialize(o, fields) for o in instance]
@@ -227,38 +265,53 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         super().__init__(**kwargs)
         self.instance: Any | None = instance
         self.many: bool = many
-        self.context: dict | None = context
+        self.context: dict | None = context or {}
         self._emit_none = emit_none
         self._data: list | dict | None = None
 
-    async def _serialize(self, instance: Any, fields: tuple) -> dict:
+    async def _serialize(self, instance: Any, fields: list[FieldDefinitions]) -> dict:
         v: dict = {}
-        for name, getter, to_value, call, required, pass_self, emit_none in fields:
-            if pass_self:
-                # checks to see if the incoming method is a coroutine
-                if inspect.iscoroutinefunction(getter):
-                    result = await getter(self, instance)
+        for (
+            name,
+            getter,
+            to_value,
+            call,
+            required,
+            pass_self,
+            emit_none,
+            getter_coro,
+            toval_coro,
+        ) in fields:
+            try:
+                if getter_coro:
+                    result = (
+                        await getter(self, instance)
+                        if pass_self
+                        else await getter(instance)
+                    )
                 else:
-                    result = getter(self, instance)
-            else:
-                try:
-                    result = getter(instance)
-                except (KeyError, AttributeError):
-                    if required:
-                        raise
-                    else:
-                        continue
+                    result = getter(self, instance) if pass_self else getter(instance)
+            except (KeyError, AttributeError):
+                if required:
+                    raise
+                continue
 
-                if required or result is not None:
-                    if call:
-                        result = result()
-                    if to_value:
-                        if inspect.iscoroutinefunction(to_value):
-                            result = await to_value(result)
-                        else:
-                            result = to_value(result)
+            if result is None and not required:
+                if emit_none:
+                    v[name] = result
+                    continue
+                continue
 
-            if result is None and emit_none is False:
+            if call:
+                result = result()
+
+            if to_value:
+                if toval_coro:
+                    result = await to_value(result)
+                else:
+                    result = to_value(result)
+
+            if result is None and not emit_none:
                 continue
 
             v[name] = result
@@ -266,7 +319,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         return v
 
     async def to_value(self, instance: Any) -> list | dict:
-        fields: tuple = self._compiled_fields
+        fields: list[FieldDefinitions] = self._compiled_fields
         if self.many:
             serialize = self._serialize
             return [await serialize(o, fields) async for o in instance]
