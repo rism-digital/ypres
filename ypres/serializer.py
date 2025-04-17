@@ -1,7 +1,7 @@
 import inspect
 import operator
 from abc import abstractmethod
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import AsyncIterable, Callable, Iterable, Mapping
 from typing import Any, NamedTuple
 from warnings import deprecated
 
@@ -46,7 +46,10 @@ class SerializerBase(Field):
         elif (
             instance
             and many
-            and (not isinstance(instance, Iterable) or isinstance(instance, dict))
+            and (
+                not isinstance(instance, Iterable | AsyncIterable)
+                or isinstance(instance, dict)
+            )
         ):
             # if we're not serializing a list (or some iterable object EXCEPT dicts) and many=True,
             # then raise a value error.
