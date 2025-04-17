@@ -1,3 +1,4 @@
+import itertools
 import unittest
 
 from ypres.fields import BoolField, Field, FloatField, IntField, MethodField, StrField
@@ -310,6 +311,37 @@ class TestSerializer(unittest.TestCase):
         # ensure this works as expected
         with self.assertRaises(TypeError):
             _ = FooSerializer(o).serialized
+
+    def test_many_iterable(self):
+        class ASerializer(Serializer):
+            a = Field()
+
+        objs1 = [Obj(a=i) for i in range(5)]
+        objs2 = [Obj(a=i) for i in range(7, 10)]
+        objs = itertools.chain(objs1, objs2)
+        data = ASerializer(objs, many=True).serialized_many
+        self.assertEqual(len(data), 8)
+        self.assertEqual(data[0]["a"], 0)
+        self.assertEqual(data[1]["a"], 1)
+        self.assertEqual(data[2]["a"], 2)
+        self.assertEqual(data[3]["a"], 3)
+        self.assertEqual(data[4]["a"], 4)
+
+    def test_many_dict_raises_valueerror(self):
+        class ASerializer(Serializer):
+            a = Field()
+
+        class BSerializer(DictSerializer):
+            b = Field()
+
+        o = Obj(foo=None)
+        m = {"bar": None}
+
+        with self.assertRaises(ValueError):
+            _ = ASerializer(o, many=True)
+
+        with self.assertRaises(ValueError):
+            _ = BSerializer(m, many=True)
 
 
 if __name__ == "__main__":

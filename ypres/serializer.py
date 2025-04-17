@@ -1,7 +1,7 @@
 import inspect
 import operator
 from abc import abstractmethod
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any, NamedTuple
 from warnings import deprecated
 
@@ -41,8 +41,15 @@ class SerializerBase(Field):
     ):
         super().__init__(**kwargs)
         if instance and isinstance(instance, list) and not many:
+            # if we're serializing a list but have not set many=True then raise a value error.
             raise ValueError("Cannot serialize an object from a list.")
-        elif instance and not isinstance(instance, list) and many:
+        elif (
+            instance
+            and many
+            and (not isinstance(instance, Iterable) or isinstance(instance, dict))
+        ):
+            # if we're not serializing a list (or some iterable object EXCEPT dicts) and many=True,
+            # then raise a value error.
             raise ValueError("Cannot serialize a list from an object.")
 
         self.instance: Any = instance
