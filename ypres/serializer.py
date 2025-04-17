@@ -3,8 +3,9 @@ import operator
 from abc import abstractmethod
 from collections.abc import Callable, Mapping
 from typing import Any, NamedTuple
+from warnings import deprecated
 
-from ypres.fields import Field
+from ypres import Field
 
 
 class FieldDefinitions(NamedTuple):
@@ -20,43 +21,43 @@ class FieldDefinitions(NamedTuple):
 
 
 class SerializerBase(Field):
+    __slots__: list = [
+        "instance",
+        "many",
+        "context",
+        "_emit_none",
+        "_data",
+        "_serialized",
+        "_serialized_many",
+    ]
+
+    def __init__(
+        self,  # type: ignore
+        instance: Any | None = None,
+        many: bool = False,
+        context: dict | None = None,
+        emit_none: bool = False,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if instance and isinstance(instance, list) and not many:
+            raise ValueError("Cannot serialize an object from a list.")
+        elif instance and not isinstance(instance, list) and many:
+            raise ValueError("Cannot serialize a list from an object.")
+
+        self.instance: Any = instance
+        self.many: bool = many
+        self.context: dict = context or {}
+        self._emit_none = emit_none
+        self._serialized: dict | None = None
+        self._serialized_many: list | None = None
+
     @staticmethod
     @abstractmethod
     def default_getter(k: str) -> Any: ...
 
     _field_map: dict = {}
     _compiled_fields: list[FieldDefinitions] = []
-
-
-def _compile_field_to_tuple(
-    field: Field, name: str, serializer_cls: type[SerializerBase]
-) -> FieldDefinitions:
-    getter = field.as_getter(name, serializer_cls)
-    if getter is None:
-        getter = serializer_cls.default_getter(field.attr or name)
-
-    getter_is_coro: bool = inspect.iscoroutinefunction(getter)
-
-    # Only set a to_value function if it has been overridden for performance.
-    to_value: Callable | None = None
-    if field.is_to_value_overridden():
-        to_value = field.to_value
-
-    toval_is_coro: bool = inspect.iscoroutinefunction(to_value)
-    # Set the field name to a supplied label; defaults to the attribute name.
-    name = field.label or name
-
-    return FieldDefinitions(
-        name=name,
-        getter=getter,
-        to_value=to_value,
-        call=field.call,
-        required=field.required,
-        pass_self=field.getter_takes_serializer,
-        emit_none=field.emit_none,
-        getter_is_coro=getter_is_coro,
-        toval_is_coro=toval_is_coro,
-    )
 
 
 class SerializerMeta(type):
@@ -99,50 +100,39 @@ class SerializerMeta(type):
         return real_cls
 
 
+def _compile_field_to_tuple(
+    field: Field, name: str, serializer_cls: type[SerializerBase]
+) -> FieldDefinitions:
+    getter = field.as_getter(name, serializer_cls)
+    if getter is None:
+        getter = serializer_cls.default_getter(field.attr or name)
+
+    getter_is_coro: bool = inspect.iscoroutinefunction(getter)
+
+    # Only set a to_value function if it has been overridden for performance.
+    to_value: Callable | None = None
+    if field.is_to_value_overridden():
+        to_value = field.to_value
+
+    toval_is_coro: bool = inspect.iscoroutinefunction(to_value)
+    # Set the field name to a supplied label; defaults to the attribute name.
+    name = field.label or name
+
+    return FieldDefinitions(
+        name=name,
+        getter=getter,
+        to_value=to_value,
+        call=field.call,
+        required=field.required,
+        pass_self=field.getter_takes_serializer,
+        emit_none=field.emit_none,
+        getter_is_coro=getter_is_coro,
+        toval_is_coro=toval_is_coro,
+    )
+
+
 class Serializer(SerializerBase, metaclass=SerializerMeta):
-    """:class:`Serializer` is used as a base for custom serializers.
-
-    The :class:`Serializer` class is also a subclass of :class:`Field`, and can
-    be used as a :class:`Field` to create nested schemas. A serializer is
-    defined by subclassing :class:`Serializer` and adding each :class:`Field`
-    as a class variable:
-
-    Example: ::
-
-        class FooSerializer(Serializer):
-            foo = Field()
-            bar = Field()
-
-        foo = Foo(foo='hello', bar=5)
-        res = FooSerializer(foo).data
-        # {'foo': 'hello', 'bar': 5}
-
-    :param instance: The object or objects to serialize.
-    :param bool many: If ``instance`` is a collection of objects, set ``many``
-        to ``True`` to serialize to a list.
-    :param data: Provided for compatibility with DRF serializers. Should not
-        be used.
-    :param dict context: A context dictionary for additional parameters to be
-        passed into the serializer instance.
-    """
-
-    #: The default getter used if :meth:`Field.as_getter` returns None.
     default_getter: Any = operator.attrgetter
-
-    def __init__(
-        self,  # type: ignore
-        instance: Any | None = None,
-        many: bool = False,
-        context: dict | None = None,
-        emit_none: bool = False,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.instance: Any = instance
-        self.many: bool = many
-        self.context: dict = context or {}
-        self._emit_none = emit_none
-        self._data: list | dict | None = None
 
     def _serialize(self, instance: Any, fields: list[FieldDefinitions]) -> dict:
         v: dict = {}
@@ -150,7 +140,7 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
         for (
             name,
             getter,
-            to_value,
+            tval,
             call,
             required,
             pass_self,
@@ -175,8 +165,8 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
             if call:
                 result = result()
 
-            if to_value:
-                result = to_value(result)
+            if tval:
+                result = tval(result)
 
             # If `None` values should not appear in the output,
             # and we have a result that is None, we just skip
@@ -188,93 +178,55 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    def to_value(self, instance) -> list | dict:
-        fields: list[FieldDefinitions] = self._compiled_fields
+    def to_value(self, instance: Any) -> list | dict:
         if self.many:
-            serialize = self._serialize
-            return [serialize(o, fields) for o in instance]
-        return self._serialize(instance, fields)
+            return self._serialize_list(instance)
+        return self._serialize_dict(instance)
+
+    def _serialize_dict(self, instance: Any) -> dict:
+        self._serialized = self._serialize(instance, self._compiled_fields)
+        return self._serialized
+
+    def _serialize_list(self, instance: Any) -> list:
+        self._serialized_many = [
+            self._serialize(o, self._compiled_fields) for o in instance
+        ]
+        return self._serialized_many
 
     @property
+    @deprecated("Use the .serialized and .serialized_many properties.")
     def data(self) -> list | dict:
         """Get the serialized data from the :class:`Serializer`.
 
         The data will be cached for future accesses.
         """
         # Cache the data for next time .data is called.
-        if self._data is None:
-            self._data = self.to_value(self.instance)
-        return self._data
+        return self.to_value(self.instance)
+
+    @property
+    def serialized(self) -> dict:
+        if self._serialized is not None:
+            return self._serialized
+        return self._serialize_dict(self.instance)
+
+    @property
+    def serialized_many(self) -> list:
+        if self._serialized_many is not None:
+            return self._serialized_many
+        return self._serialize_list(self.instance)
 
 
 class DictSerializer(Serializer):
-    """:class:`DictSerializer` serializes python ``dicts`` instead of objects.
-
-    Instead of the serializer's fields fetching data using
-    ``operator.attrgetter``, :class:`DictSerializer` uses
-    ``operator.itemgetter``.
-
-    Example: ::
-
-        class FooSerializer(DictSerializer):
-            foo = IntField()
-            bar = FloatField()
-
-        foo = {'foo': '5', 'bar': '2.2'}
-        res = FooSerializer(foo).data
-        # {'foo': 5, 'bar': 2.2}
-    """
-
     default_getter: Any = operator.itemgetter
 
 
 class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
-    """:class:`Serializer` is used as a base for custom serializers, but that
-    can support asynchronous methods in the :class:`MethodField` instances,
-    or from objects with asynchronous accessors.
-
-    Non-async method fields are also supported on the same serializer.
-
-    Example: ::
-
-        class FooSerializer(AsyncSerializer):
-            foo = MethodField()
-            bar = MethodField()
-
-            async def get_foo(self, obj):
-                return await my_async_foo_data(obj)
-
-            def get_bar(self, obj):
-                return my_bar_data(obj)
-
-        out_data = await FooSerializer(in_data).data
-
-    """
-
-    #: The default getter used if :meth:`Field.as_getter` returns None.
-    default_getter: Any = operator.attrgetter
-
-    def __init__(
-        self,  # type: ignore
-        instance: Any | None = None,
-        many: bool = False,
-        context: dict | None = None,
-        emit_none: bool = False,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.instance: Any | None = instance
-        self.many: bool = many
-        self.context: dict = context or {}
-        self._emit_none = emit_none
-        self._data: list | dict | None = None
-
     async def _serialize(self, instance: Any, fields: list[FieldDefinitions]) -> dict:
         v: dict = {}
         for (
             name,
             getter,
-            to_value,
+            tval,
             call,
             required,
             pass_self,
@@ -305,11 +257,11 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
             if call:
                 result = result()
 
-            if to_value:
+            if tval:
                 if toval_coro:
-                    result = await to_value(result)
+                    result = await tval(result)
                 else:
-                    result = to_value(result)
+                    result = tval(result)
 
             if result is None and not emit_none:
                 continue
@@ -319,37 +271,42 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         return v
 
     async def to_value(self, instance: Any) -> list | dict:
-        fields: list[FieldDefinitions] = self._compiled_fields
         if self.many:
-            serialize = self._serialize
-            return [await serialize(o, fields) async for o in instance]
-        return await self._serialize(instance, fields)
+            return await self._serialize_list(instance)
+        return await self._serialize_dict(instance)
+
+    async def _serialize_dict(self, instance: Any) -> dict:
+        self._serialized = await self._serialize(instance, self._compiled_fields)
+        return self._serialized
+
+    async def _serialize_list(self, instance: Any) -> list:
+        self._serialized_many = [
+            await self._serialize(o, self._compiled_fields) for o in instance
+        ]
+        return self._serialized_many
 
     @property
+    @deprecated("Use the .serialized and .serialized_many properties.")
     async def data(self) -> list | dict:
         """Get the serialized data from the :class:`Serializer`.
 
         The data will be cached for future accesses.
         """
         # Cache the data for next time .data is called.
-        if self._data is None:
-            self._data = await self.to_value(self.instance)
-        return self._data
+        return await self.to_value(self.instance)
+
+    @property
+    async def serialized(self) -> dict:
+        if self._serialized is not None:
+            return self._serialized
+        return await self._serialize_dict(self.instance)
+
+    @property
+    async def serialized_many(self) -> list:
+        if self._serialized_many is not None:
+            return self._serialized_many
+        return await self._serialize_list(self.instance)
 
 
 class AsyncDictSerializer(AsyncSerializer):
-    """:class:`DictSerializer` serializes python ``dicts`` instead of objects.
-    Supports asynchronous :class:`MethodField` contents.
-
-    Example: ::
-
-        class FooSerializer(Async DictSerializer):
-            foo = IntField()
-            bar = FloatField()
-
-        foo = {'foo': '5', 'bar': '2.2'}
-        res = await FooSerializer(foo).data
-        # {'foo': 5, 'bar': 2.2}
-    """
-
     default_getter: Any = operator.itemgetter

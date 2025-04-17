@@ -44,6 +44,21 @@ that you wish to use when serializing the object. For example, you might pass in
 that could customize the responses in the serializer with their name, or only perform certain
 serialization tasks if they are of a specific class (e.g., admin).
 
+### Date and DateTime Serializer Fields
+
+Date and DateTime fields can be serialized, based on the implementation from another fork,
+https://github.com/PKharlamov/drf-serpy/blob/master/drf_serpy/fields.py.
+
+### Deprecated the `.data` property.
+
+Since `.data` can return either a `list` (with `many=True`) or a `dict`, type checkers
+complained when you serialized a single object because the calling code does not handle
+the case of `data` being a list.
+
+Instead, two new properties, `serialized` and `serialized_many` are introduced that
+return a dict and a list directly. In the course of doing this work the class structure
+for the serializers was reworked to better implement common checks and data in the superclass.
+
 ```python
 import ypres
 
@@ -67,7 +82,7 @@ class Foo:
     foo = "foo"
     blah = "blah"
 
-my_data = MySerializer(Foo(), context={"additional": "bar"})
+my_data = MySerializer(Foo(), context={"additional": "bar"}).serialized
 
 # {"foo": "foo_bar", "blah": "blah_bar"}
 ```
@@ -106,6 +121,10 @@ This prevents unexpected type values from appearing in the
 output. For values that cannot be cast to `None` for `IntField` and `FloatField`,
 a `None` input will raise an exception.
 
+### Switched to UV for package management.
+
+
+
 ## Source
 
 Source at: <https://github.com/rism-digital/ypres>
@@ -119,7 +138,7 @@ Full documentation at: <http://ypres.readthedocs.org/en/latest/>
 ## Installation
 
 ``` bash
-$ pip install ypres
+$ pip install git+https://github.com/rism-digital/ypres
 ```
 
 ## Examples
@@ -141,16 +160,16 @@ class Foo(object):
 class FooSerializer(ypres.Serializer):
     """The serializer schema definition."""
     # Use a Field subclass like IntField if you need more validation.
-    x = serpy.IntField()
-    y = serpy.Field()
-    z = serpy.Field()
+    x = ypres.IntField()
+    y = ypres.Field()
+    z = ypres.Field()
 
 f = Foo(1)
-FooSerializer(f).data
+FooSerializer(f).serialized
 # {'x': 1, 'y': 'hello', 'z': 9.5}
 
 fs = [Foo(i) for i in range(100)]
-FooSerializer(fs, many=True).data
+FooSerializer(fs, many=True).serialized_many
 # [{'x': 0, 'y': 'hello', 'z': 9.5}, {'x': 1, 'y': 'hello', 'z': 9.5}, ...]
 ```
 
@@ -170,16 +189,16 @@ class Foo(object):
 
 
 class NesteeSerializer(ypres.Serializer):
-    n = serpy.Field()
+    n = ypres.Field()
 
 
 class FooSerializer(ypres.Serializer):
-    x = serpy.Field()
+    x = ypres.Field()
     # Use another serializer as a field.
     nested = NesteeSerializer()
 
 f = Foo()
-FooSerializer(f).data
+FooSerializer(f).serialized
 # {'x': 1, 'nested': {'n': 'hi'}}
 ```
 
@@ -206,7 +225,7 @@ class FooSerializer(ypres.Serializer):
         return obj.y + obj.z
 
 f = Foo()
-FooSerializer(f).data
+FooSerializer(f).serialized
 # {'w': 10, 'x': 5, 'plus': 3}
 ```
 
@@ -232,14 +251,13 @@ class ABSerializer(ASerializer):
     b = ypres.Field()
 
 f = Foo()
-ASerializer(f).data
+ASerializer(f).serialized
 # {'a': 1}
-ABSerializer(f).data
+ABSerializer(f).serialized
 # {'a': 1, 'b': 2}
 ```
 
 ## License
 
 ypres is free software distributed under the terms of the MIT license.
-See the [LICENSE](https://github.com/clarkduvall/serpy/blob/master/LICENSE)
-file.
+See the [LICENSE](https://github.com/clarkduvall/serpy/blob/master/LICENSE) file.

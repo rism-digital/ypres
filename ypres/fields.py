@@ -60,7 +60,7 @@ class Field:
 
     to_value._ypres_base_implementation = True  # type: ignore
 
-    def is_to_value_overridden(self):
+    def is_to_value_overridden(self) -> bool:
         to_value = self.to_value
         # If to_value isn't a method, it must have been overridden.
         if not isinstance(to_value, types.MethodType):

@@ -12,7 +12,7 @@ class TestSerializer(unittest.TestCase):
             a = Field()
 
         a = Obj(a=5)
-        self.assertEqual(ASerializer(a).data["a"], 5)
+        self.assertEqual(ASerializer(a).serialized["a"], 5)
 
     def test_data_cached(self):
         class ASerializer(Serializer):
@@ -20,8 +20,8 @@ class TestSerializer(unittest.TestCase):
 
         a = Obj(a=5)
         serializer = ASerializer(a)
-        data1 = serializer.data
-        data2 = serializer.data
+        data1 = serializer.serialized
+        data2 = serializer.serialized
         # Use assertTrue instead of assertIs for python 2.6.
         self.assertTrue(data1 is data2)
 
@@ -39,11 +39,11 @@ class TestSerializer(unittest.TestCase):
             pass
 
         a = Obj(a=5, b="hello", c=100)
-        self.assertEqual(ASerializer(a).data["a"], 5)
-        data = ABSerializer(a).data
+        self.assertEqual(ASerializer(a).serialized["a"], 5)
+        data = ABSerializer(a).serialized
         self.assertEqual(data["a"], 5)
         self.assertEqual(data["b"], "hello")
-        data = ABCSerializer(a).data
+        data = ABCSerializer(a).serialized
         self.assertEqual(data["a"], 5)
         self.assertEqual(data["b"], "hello")
         self.assertEqual(data["c"], 100)
@@ -53,7 +53,7 @@ class TestSerializer(unittest.TestCase):
             a = Field()
 
         objs = [Obj(a=i) for i in range(5)]
-        data = ASerializer(objs, many=True).data
+        data = ASerializer(objs, many=True).serialized_many
         self.assertEqual(len(data), 5)
         self.assertEqual(data[0]["a"], 0)
         self.assertEqual(data[1]["a"], 1)
@@ -69,7 +69,7 @@ class TestSerializer(unittest.TestCase):
             b = ASerializer()
 
         b = Obj(b=Obj(a=3))
-        self.assertEqual(BSerializer(b).data["b"]["a"], 3)
+        self.assertEqual(BSerializer(b).serialized["b"]["a"], 3)
 
     def test_serializer_as_field_many(self):
         class ASerializer(Serializer):
@@ -79,7 +79,7 @@ class TestSerializer(unittest.TestCase):
             b = ASerializer(many=True)
 
         b = Obj(b=[Obj(a=i) for i in range(3)])
-        b_data = BSerializer(b).data["b"]
+        b_data = BSerializer(b).serialized["b"]
         self.assertEqual(len(b_data), 3)
         self.assertEqual(b_data[0]["a"], 0)
         self.assertEqual(b_data[1]["a"], 1)
@@ -93,7 +93,7 @@ class TestSerializer(unittest.TestCase):
             b = ASerializer(call=True)
 
         b = Obj(b=lambda: Obj(a=3))
-        self.assertEqual(BSerializer(b).data["b"]["a"], 3)
+        self.assertEqual(BSerializer(b).serialized["b"]["a"], 3)
 
     def test_serializer_method_field(self):
         class ASerializer(Serializer):
@@ -107,7 +107,7 @@ class TestSerializer(unittest.TestCase):
                 return obj.a + 9
 
         a = Obj(a=2)
-        data = ASerializer(a).data
+        data = ASerializer(a).serialized
         self.assertEqual(data["a"], 7)
         self.assertEqual(data["b"], 11)
 
@@ -118,7 +118,7 @@ class TestSerializer(unittest.TestCase):
             c = StrField(attr="foo.bar.baz")
 
         o = Obj(a="5", b=lambda: "6.2", foo=Obj(bar=Obj(baz=10)))
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertEqual(data["a"], 5)
         self.assertEqual(data["b"], 6.2)
         self.assertEqual(data["c"], "10")
@@ -129,7 +129,7 @@ class TestSerializer(unittest.TestCase):
             b = Field(attr="foo")
 
         d = {"a": "2", "foo": "hello"}
-        data = ASerializer(d).data
+        data = ASerializer(d).serialized
         self.assertEqual(data["a"], 2)
         self.assertEqual(data["b"], "hello")
 
@@ -138,7 +138,7 @@ class TestSerializer(unittest.TestCase):
             a = Field("a.b.c")
 
         o = Obj(a=Obj(b=Obj(c=2)))
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertEqual(data["a"], 2)
 
     def test_custom_field(self):
@@ -150,7 +150,7 @@ class TestSerializer(unittest.TestCase):
             a = Add5Field()
 
         o = Obj(a=10)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertEqual(data["a"], 15)
 
     def test_optional_intfield(self):
@@ -158,12 +158,12 @@ class TestSerializer(unittest.TestCase):
             a = IntField(required=False)
 
         o = Obj(a=None)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertIsNone(data.get("a"))
         self.assertNotIn("a", data)
 
         o = Obj(a="5")
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertEqual(data["a"], 5)
 
         class ASerializer(Serializer):
@@ -171,49 +171,49 @@ class TestSerializer(unittest.TestCase):
 
         o = Obj(a=None)
         with self.assertRaises(TypeError):
-            ASerializer(o).data  # noqa
+            _ = ASerializer(o).serialized
 
     def test_optional_field_dictserializer(self):
         class ASerializer(DictSerializer):
             a = Field(required=False)
 
-        data = ASerializer({"a": None}).data
+        data = ASerializer({"a": None}).serialized
         self.assertIsNone(data.get("a"))
 
-        data = ASerializer({}).data
+        data = ASerializer({}).serialized
         self.assertNotIn("a", data)
 
         class ASerializer(DictSerializer):
             a = Field()
 
-        data = ASerializer({"a": None}).data
+        data = ASerializer({"a": None}).serialized
         self.assertIsNone(data.get("a"))
 
         with self.assertRaises(KeyError):
-            ASerializer({}).data  # noqa
+            _ = ASerializer({}).serialized
 
     def test_optional_field(self):
         class ASerializer(Serializer):
             a = Field(required=False)
 
         o = Obj(a=None)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertIsNone(data.get("a"))
 
         o = Obj()
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertNotIn("a", data)
 
         class ASerializer(Serializer):
             a = Field()
 
         o = Obj(a=None)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertIsNone(data.get("a"))
 
         o = Obj()
         with self.assertRaises(AttributeError):
-            ASerializer(o).data  # noqa
+            _ = ASerializer(o).serialized
 
     def test_optional_methodfield(self):
         class ASerializer(Serializer):
@@ -223,12 +223,12 @@ class TestSerializer(unittest.TestCase):
                 return obj.a
 
         o = Obj(a=None)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertIsNone(data.get("a"))
         self.assertNotIn("a", data)
 
         o = Obj(a="5")
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertEqual(data["a"], "5")
 
         class ASerializer(Serializer):
@@ -238,7 +238,7 @@ class TestSerializer(unittest.TestCase):
                 return obj.a
 
         o = Obj(a=None)
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
         self.assertIsNone(data.get("a"))
 
     def test_error_on_data(self):
@@ -254,7 +254,7 @@ class TestSerializer(unittest.TestCase):
                 return obj.content
 
         o = Obj(context="http://foo/bar/baz/", content="http://baz/bar/foo/")
-        data = ASerializer(o).data
+        data = ASerializer(o).serialized
 
         self.assertIn("@context", data)
         self.assertEqual(data["@context"], "http://foo/bar/baz/")
@@ -266,13 +266,13 @@ class TestSerializer(unittest.TestCase):
             foo = StrField(emit_none=True)
 
         o = Obj(foo="blah")
-        data = FooSerializer(o).data
+        data = FooSerializer(o).serialized
         self.assertIn("foo", data)
 
         # This should raise because it doesn't have a "foo" field
         o2 = Obj(bar="blah")
         with self.assertRaises(AttributeError):
-            _ = FooSerializer(o2).data
+            _ = FooSerializer(o2).serialized
 
     def test_emit_none_false_required_true_serializer(self):
         class FooSerializer(Serializer):
@@ -281,7 +281,7 @@ class TestSerializer(unittest.TestCase):
         # This should not raise an error because 'foo' is not required. "bar" will
         # be ignored since we don't have a serializer field for it.
         o = Obj(bar="blah")
-        data = FooSerializer(o).data
+        data = FooSerializer(o).serialized
         self.assertNotIn("bar", data)
 
     def test_emit_none_true_required_false_serializer(self):
@@ -292,7 +292,7 @@ class TestSerializer(unittest.TestCase):
             gab = IntField(emit_none=True, required=False)
 
         o = Obj(foo="blah", bar=None, baz=None, gab=None)
-        data = FooSerializer(o).data
+        data = FooSerializer(o).serialized
         self.assertIn("foo", data)
         self.assertIsNotNone(data["foo"])
         self.assertIn("bar", data)
@@ -309,7 +309,7 @@ class TestSerializer(unittest.TestCase):
         o = Obj(foo=None)
         # ensure this works as expected
         with self.assertRaises(TypeError):
-            _ = FooSerializer(o).data
+            _ = FooSerializer(o).serialized
 
 
 if __name__ == "__main__":
