@@ -292,9 +292,14 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
         return self._serialized
 
     async def _serialize_list(self, instance: Any) -> list:
-        self._serialized_many = [
-            await self._serialize(o, self._compiled_fields) for o in instance
-        ]
+        if isinstance(instance, AsyncIterable):
+            self._serialized_many = [
+                await self._serialize(o, self._compiled_fields) async for o in instance
+            ]
+        else:
+            self._serialized_many = [
+                await self._serialize(o, self._compiled_fields) for o in instance
+            ]
         return self._serialized_many
 
     @property
