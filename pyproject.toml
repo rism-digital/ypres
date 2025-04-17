@@ -1,6 +1,6 @@
 [project]
 name = "ypres"
-version = "1.0.1"
+version = "1.1.0"
 description = "ypres is a simple object serialization framework built for speed."
 authors = [{ name = "Andrew Hankinson", email = "andrew.hankinson@gmail.com" }]
 requires-python = ">=3.11,<4.0"
