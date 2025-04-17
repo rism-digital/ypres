@@ -221,6 +221,8 @@ class DictSerializer(Serializer):
 
 
 class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
+    default_getter: Any = operator.attrgetter
+
     async def _serialize(self, instance: Any, fields: list[FieldDefinitions]) -> dict:
         v: dict = {}
         for (
