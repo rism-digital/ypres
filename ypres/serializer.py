@@ -124,7 +124,8 @@ def _compile_field_to_tuple(
     if field.is_to_value_overridden():
         to_value = field.to_value
 
-    toval_is_coro: bool = inspect.iscoroutinefunction(to_value)
+    # we only need to check if to_value is a coroutine if it is not None.
+    toval_is_coro: bool = inspect.iscoroutinefunction(to_value) if to_value else False
     # Set the field name to a supplied label; defaults to the attribute name.
     name = field.label or name
 

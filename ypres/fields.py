@@ -30,6 +30,7 @@ class Field:
     #: :meth:`Field.as_getter` requires the serializer to be passed in as the
     #: first argument. Otherwise, the object will be the only parameter.
     getter_takes_serializer: bool = False
+    __slots__ = ["attr", "call", "label", "required", "emit_none"]
 
     def __init__(
         self,
@@ -171,6 +172,7 @@ class MethodField(Field):
     """
 
     getter_takes_serializer = True
+    __slots__ = ["method"]
 
     def __init__(self, method: str | None = None, **kwargs):  # type: ignore
         super().__init__(**kwargs)
