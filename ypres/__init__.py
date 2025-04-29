@@ -1,5 +1,7 @@
 from ypres.fields import (
     BoolField,
+    DateField,
+    DateTimeField,
     Field,
     FloatField,
     IntField,
@@ -30,4 +32,6 @@ __all__ = [
     "MethodField",
     "StrField",
     "StaticField",
+    "DateField",
+    "DateTimeField",
 ]
