@@ -189,10 +189,10 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    def to_value(self, instance: Any) -> list | dict:
+    def to_value(self, value: Any) -> list | dict:
         if self.many:
-            return self._serialize_list(instance)
-        return self._serialize_dict(instance)
+            return self._serialize_list(value)
+        return self._serialize_dict(value)
 
     def _serialize_dict(self, instance: Any) -> dict:
         self._serialized = self._serialize(instance, self._compiled_fields)
@@ -283,10 +283,10 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
 
         return v
 
-    async def to_value(self, instance: Any) -> list | dict:
+    async def to_value(self, value: Any) -> list | dict:
         if self.many:
-            return await self._serialize_list(instance)
-        return await self._serialize_dict(instance)
+            return await self._serialize_list(value)
+        return await self._serialize_dict(value)
 
     async def _serialize_dict(self, instance: Any) -> dict:
         self._serialized = await self._serialize(instance, self._compiled_fields)
