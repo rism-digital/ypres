@@ -196,13 +196,13 @@ class Serializer(SerializerBase, metaclass=SerializerMeta):
 
     def _serialize_dict(self, instance: Any) -> dict:
         self._serialized = self._serialize(instance, self._compiled_fields)
-        return self._serialized
+        return self._serialized or {}
 
     def _serialize_list(self, instance: Any) -> list:
         self._serialized_many = [
             self._serialize(o, self._compiled_fields) for o in instance
         ]
-        return self._serialized_many
+        return self._serialized_many or []
 
     @property
     @deprecated("Use the .serialized and .serialized_many properties.")
@@ -290,7 +290,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
 
     async def _serialize_dict(self, instance: Any) -> dict:
         self._serialized = await self._serialize(instance, self._compiled_fields)
-        return self._serialized
+        return self._serialized or {}
 
     async def _serialize_list(self, instance: Any) -> list:
         if isinstance(instance, AsyncIterable):
@@ -301,7 +301,7 @@ class AsyncSerializer(SerializerBase, metaclass=SerializerMeta):
             self._serialized_many = [
                 await self._serialize(o, self._compiled_fields) for o in instance
             ]
-        return self._serialized_many
+        return self._serialized_many or []
 
     @property
     @deprecated("Use the .serialized and .serialized_many properties.")
