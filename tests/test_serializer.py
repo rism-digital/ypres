@@ -26,6 +26,23 @@ class TestSerializer(unittest.TestCase):
         # Use assertTrue instead of assertIs for python 2.6.
         self.assertTrue(data1 is data2)
 
+    def test_data_property(self):
+        class ASerializer(Serializer):
+            a = Field()
+
+        a = Obj(a=5)
+        data = ASerializer(a).data
+        self.assertEqual(data["a"], 5)
+
+    def test_data_property_many(self):
+        class ASerializer(Serializer):
+            a = Field()
+
+        objs = [Obj(a=i) for i in range(3)]
+        data = ASerializer(objs, many=True).data
+        self.assertEqual(len(data), 3)
+        self.assertEqual(data[2]["a"], 2)
+
     def test_inheritance(self):
         class ASerializer(Serializer):
             a = Field()
@@ -302,6 +319,20 @@ class TestSerializer(unittest.TestCase):
         self.assertIsNone(data["baz"])
         self.assertIn("gab", data)
         self.assertIsNone(data["gab"])
+
+    def test_emit_none_true_required_false_missing_serializer(self):
+        class FooSerializer(Serializer):
+            foo = StrField(emit_none=True, required=False)
+
+        data = FooSerializer(Obj()).serialized
+        self.assertNotIn("foo", data)
+
+    def test_emit_none_true_required_false_missing_dictserializer(self):
+        class FooSerializer(DictSerializer):
+            foo = StrField(emit_none=True, required=False)
+
+        data = FooSerializer({}).serialized
+        self.assertNotIn("foo", data)
 
     def test_serializing_int_and_none(self):
         class FooSerializer(Serializer):

@@ -1,6 +1,17 @@
 import unittest
+from datetime import date, datetime
 
-from ypres.fields import BoolField, Field, FloatField, IntField, MethodField, StrField
+from ypres.fields import (
+    BoolField,
+    DateField,
+    DateTimeField,
+    Field,
+    FloatField,
+    IntField,
+    MethodField,
+    StaticField,
+    StrField,
+)
 
 from .obj import Obj
 
@@ -84,6 +95,29 @@ class TestFields(unittest.TestCase):
     def test_field_label(self):
         field1 = StrField(label="@id")
         self.assertEqual(field1.label, "@id")
+
+    def test_static_field(self):
+        field = StaticField("hello")
+        self.assertEqual(field.to_value("ignored"), "hello")
+        getter = field.as_getter("any", None)
+        self.assertEqual(getter("ignored"), "hello")
+
+    def test_date_field(self):
+        field = DateField()
+        self.assertEqual(field.to_value(date(2024, 1, 2)), "2024-01-02")
+        self.assertIsNone(field.to_value(None))
+
+    def test_date_field_custom_format(self):
+        field = DateField("%d/%m/%Y")
+        self.assertEqual(field.to_value(date(2024, 1, 2)), "02/01/2024")
+
+    def test_datetime_field(self):
+        field = DateTimeField()
+        self.assertEqual(
+            field.to_value(datetime(2024, 1, 2, 3, 4, 5)),
+            "2024-01-02T03:04:05.000000Z",
+        )
+        self.assertIsNone(field.to_value(None))
 
 
 if __name__ == "__main__":
