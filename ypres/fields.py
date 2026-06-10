@@ -95,6 +95,8 @@ class Field:
 class StaticField(Field):
     """A :class:`Field` that simply repeats a static value."""
 
+    __slots__ = ["value"]
+
     def __init__(
         self,
         value: Any,
@@ -189,15 +191,16 @@ class MethodField(Field):
 class DateField(Field):
     """A `Field` that converts the value to a date format."""
 
+    __slots__ = ["_date_format"]
     date_format = "%Y-%m-%d"
 
     def __init__(self, date_format: str | None = None, **kwargs):
         super().__init__(**kwargs)
-        self.date_format = date_format or self.date_format
+        self._date_format = date_format or self.date_format
 
     def to_value(self, value: datetime | time | date) -> str | None:
         if value:
-            return value.strftime(self.date_format)
+            return value.strftime(self._date_format)
         return None
 
 
