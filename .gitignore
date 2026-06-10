@@ -46,3 +46,4 @@ docs/_build/
 *.swp
 .idea
 
+.DS_Store
