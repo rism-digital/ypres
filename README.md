@@ -1,15 +1,15 @@
 # ypres: ridiculously fast object serialization
 
-This is a fork of the amazing [Serpy
-serializer](https://github.com/clarkduvall/serpy), which has been
-[marked as feature-complete](https://github.com/clarkduvall/serpy/issues/69) 
-by the original author. This fork adds some newer features, such as
-`asyncio` support so that asynchronous methods may be called from 
-within a serializer.
+This project started as a fork of the amazing [Serpy serializer](https://github.com/clarkduvall/serpy), which has been
+[marked as feature-complete](https://github.com/clarkduvall/serpy/issues/69) by the original author. This fork 
+adds some newer features, such as `asyncio` support so that asynchronous 
+methods may be called from within a serializer.
 
 It was renamed to "ypres" ("serpy" backwards, pronounced like the [Belgian town
-name](https://en.wikipedia.org/wiki/Ypres)) to avoid confusion with the
-original.
+name](https://en.wikipedia.org/wiki/Ypres)) to avoid confusion with the original.
+
+Since forking it has undergone numerous changes and rewrites. The core of it
+is still somewhat recognizable, but there have also been many changes. 
 
 **ypres** is a simple object serialization framework built for
 speed. **ypres** serializes complex datatypes (Django Models, custom
@@ -121,19 +121,16 @@ This prevents unexpected type values from appearing in the
 output. For values that cannot be cast to `None` for `IntField` and `FloatField`,
 a `None` input will raise an exception.
 
-### Switched to UV for package management.
+### Modern Python standards
 
-
+The project uses update Python packaging setups with `pyproject.toml`. It also
+adds configurations for `ruff`, works with `uv`, and fully supports type annotations. 
 
 ## Source
 
 Source at: <https://github.com/rism-digital/ypres>
 
 If you want a feature, send a pull request!
-
-## Documentation
-
-Full documentation at: <http://ypres.readthedocs.org/en/latest/>
 
 ## Installation
 
