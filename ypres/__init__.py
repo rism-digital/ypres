@@ -1,3 +1,5 @@
+from importlib.metadata import PackageNotFoundError, version
+
 from ypres.fields import (
     BoolField,
     DateField,
@@ -16,7 +18,11 @@ from ypres.serializer import (
     Serializer,
 )
 
-__version__ = "1.0.0"
+try:
+    __version__ = version("ypres")
+except PackageNotFoundError:
+    __version__ = "0+unknown"
+
 __author__ = "Andrew Hankinson"
 __license__ = "MIT"
 
